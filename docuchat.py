@@ -31,7 +31,9 @@ def get_text_chunks(text):
 def get_vector_store(text_chunks):
     embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
     vector_store = FAISS.from_texts(text_chunks, embedding=embeddings)
-    vector_store.save_local("faiss_index")
+    index_path = "faiss_index"
+    vector_store.save_local(index_path)
+    st.success(f"FAISS index saved successfully at {index_path}")
 
 def get_conversational_chain():
     prompt_template = """
@@ -47,8 +49,13 @@ def get_conversational_chain():
     return chain
 
 def user_input(user_question):
+    index_path = "faiss_index"
+    if not os.path.exists(index_path):
+        st.error(f"Index file not found at {index_path}. Please make sure to process the PDF files first.")
+        return
+
     embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
-    new_db = FAISS.load_local("faiss_index", embeddings, allow_dangerous_deserialization=True)
+    new_db = FAISS.load_local(index_path, embeddings, allow_dangerous_deserialization=True)
     docs = new_db.similarity_search(user_question)
     chain = get_conversational_chain()
     response = chain(
